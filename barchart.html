@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+	<style type="text/css">
+		body{
+			text-align: center;
+			background-color: #c5d3ea;
+		}
+		svg{
+			padding: 60px;
+			background-color: white;
+			box-shadow:  0px 5px 15px  rgba(0, 0, 0, 0.5); 
+			border:solid 1px black;
+		}
+		.xAxis path,
+		.xAxis line {
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+
+		.xAxis text {
+			font-family: sans-serif;
+			font-size: 11px;
+		}
+
+		rect:hover{
+			fill: rgb(34,55,44);
+
+		}
+
+		div.infodata{
+			visibility: hidden;
+			position: absolute;
+			width: 160px;
+			height: 40px;
+			border: black solid 1px;
+			background-color: white;
+			box-shadow:  0px 5px 5px  rgba(0, 0, 0, 0.5); 
+			padding: 5px;
+		}
+
+		span.infogdp{
+			font-weight : bold;
+		}
+
+
+	</style>
+</head>
+<body>
+	<script type="text/javascript">
+		$("document").ready(function(){
+
+
+			arrMonth = [
+			"January",
+			"February",
+			"March",
+			"April",
+			"May",
+			"June",
+			"July",
+			"August",
+			"September",
+			"October",
+			"November",
+			"December"
+			];
+
+			//Get data
+			var dataUrl = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json";
+			// dataUrl = "https://api.myjson.com/bins/19oo49";
+			
+			var arrGdpSrt = [];
+			$.getJSON(dataUrl,function(result){
+				arrGdpSrt = result.data.sort(function(a,b){		// 'data' is json element
+					if (a[0] - b[0] === 0){
+						return 0;
+					}else if  (a[0] < b[0] ) {
+						return -1;
+					}else {
+						return 1;
+					}
+				});
+			
+
+				// Variables
+		        var rect_max = 0;		// highest value of number in the data
+		        var rect_n = 0;			// number of data
+		        var rect_width = 0;		// width of rectangle (bar)
+		        var rect_margin = 0;	// margin of rectagle (bar)
+		        var svg_width = 700;	// SVG width
+		        var svg_height = 360;	// SVG height
+		        var scale = 50;		// in order to scale bar's height
+
+		        // Get highest value of number (y domain)
+		        var y_domain = [];
+		        arrGdpSrt.map(function(a){
+		        	y_domain.push(a[1]);
+		        });
+		        rect_max = Math.floor(Math.max(...y_domain));
+
+		        // Get highest value of number (x domain)
+		        var x_domain = [];
+		        arrGdpSrt.map(function(a){
+		        	if(a[0].substring(0,4) % 5 ===0 ){
+		        		x_domain.push(a[0].substring(0,4));
+		        	}
+		        });
+
+		        // label & scale X axis
+		        var xdomain_min = d3.min(arrGdpSrt, function(d) {
+		        	var date = new Date(d[0]);
+		         	// return date.getFullYear() ;
+		         	return date;
+		         });
+		        
+		        var xdomain_max = d3.max(arrGdpSrt, function(d) { 
+		        	var date = new Date(d[0]);
+		         	// return date.getFullYear() ;
+		         	return date;
+		         });
+
+		        var xScale = d3.time.scale()
+		        .domain([xdomain_min, xdomain_max])
+						 // .range([0,svg_width-9 ]);
+						 .range([0,svg_width-3 ]);
+
+						 var xAxis = d3.svg.axis()
+						 .scale(xScale)
+						 .orient("bottom")
+						 .ticks(15);
+
+
+		        // Label & scale Y axis
+		        var yDomain_min = d3.min(arrGdpSrt, function(d) { return d[1] ; });
+		        var yDomain_max = d3.max(arrGdpSrt, function(d) { return d[1] ; });
+
+		        yDomain_min = 0;	        
+		        var yScale = d3.scale.linear()
+		        .domain([yDomain_min, yDomain_max])
+		        .range([rect_max/scale,0]);
+
+		        var yAxis = d3.svg.axis()
+		        .scale(yScale)
+		        .orient("left")
+		        .ticks(10);
+
+
+		        // number of data
+		        rect_n = arrGdpSrt.length
+
+		        // width of rectangle 
+		        rect_width = (svg_width/rect_n) - rect_margin;
+		        
+		        // draw SVG
+		        var svg = d3.select("body")
+		        .append("svg")
+		        .attr("width", svg_width+"px")
+		        .attr("height",svg_height+"px");
+
+				// draw bar inside SVG
+				svg.selectAll("rect")
+				.data(arrGdpSrt)
+				.enter()
+				.append("rect")
+				.attr("x",function(val,idx){
+					return (idx * (rect_width+rect_margin));
+				})
+				.attr("width", rect_width+"px")
+				.attr("fill",function(val){
+						//return "rgb(34,140,"+Math.floor(+(val[1]/scale)*255/(rect_max/scale))+")";
+						return "rgb(34,140,100)";
+					})
+				.attr("id",function(val){
+					date = new Date(val[0]);
+					return (date.getFullYear()+"/"+arrMonth[date.getMonth()]);
+				})
+				.attr("y",function(val){	//animation
+					return(rect_max/scale)
+				})
+				.attr("height",0)			//animation
+			    .transition()				//animation
+					.duration(500)				//animation
+				.delay(function(val,idx){	//animation
+					return idx * 10;
+				})
+				.attr("y",function(val){
+					return (rect_max/scale)-(val[1]/scale);
+				})
+				.attr("height",function(val){
+					return val[1]/scale+"px";
+				});
+
+				// add axis to canvas
+				svg.append("g")
+				.attr("class", "xAxis")
+				.attr("transform", "translate(0," + (rect_max/scale) + ")")
+				.call(xAxis);
+
+				// add axis to canvas
+				svg.append("g")
+				.attr("class","xAxis")
+				.attr("transform", "translate(" + 0 + ",0)")
+				.call(yAxis);
+
+				// add title
+				svg.append("text")
+				.attr("x",svg_width/2)
+				.attr("text-anchor","middle")
+				.style("font-weight","bold")
+				.style("font-size","24px")
+				.text("USA Gross Domestic Product");
+
+				//add Y axis note
+				svg.append("text")
+				.attr("x",-(yDomain_max/scale)/2)
+				.attr("y",15)
+				.attr("text-anchor","middle")
+				.style("font-weight","bold")
+				.style("transform","rotate(270deg")
+				.style("font-size","12px")
+				.text("GDP (billion USD) ");
+				
+				//add x axis note
+				svg.append("text")
+				.attr("x",svg_width/2)
+				.attr("y",(yDomain_max/scale)+40)
+				.style("font-weight","bold")
+				.attr("text-anchor","middle")
+				.style("font-size","12px")
+				.text("Year");
+				
+
+				// displaying tooltip
+				$("rect").mouseover(function(e){
+					// alert($(this).height()*scale);
+					$(".infodata").css("visibility","visible");
+					// $(".infodata").html(($(this).height()*scale).toFixed(2) +"<br/>"+ $(this).attr("id"));
+
+					$(".infogdp").html(formatter.format($(this).height()*scale)+" Billion");
+					$(".infoyear").html($(this).attr("id"));
+
+					$(".infodata").css("left",e.clientX+10+"px");
+					$(".infodata").css("top",e.clientY+10+"px");
+				});
+
+				$("rect").mouseout(function(){
+					$(".infodata").css("visibility","hidden");
+				});
+
+				//currency display (http://stackoverflow.com/questions/149055/how-can-i-format-numbers-as-money-in-javascript)
+				//ECMA style
+				var formatter = new Intl.NumberFormat('en-US', {
+					style: 'currency',
+					currency: 'USD',
+					minimumFractionDigits: 2,
+				});
+			
+			});	// end getjson (jquery)	
+		});	// end document.ready (jquery)
+	
+
+</script>
+<div class="infodata">
+	<span class="infogdp"></span>
+	<br/>
+	<span class="infoyear"></span>
+</div>
+
+<div style="position:relative;  top:510px">
+	by : <a style="color:black; " href='https://codepen.io/risyana/'>Eka</a>
+</div>
+</body>
+</html>
